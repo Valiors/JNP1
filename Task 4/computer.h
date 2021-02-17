@@ -11,10 +11,10 @@
 #include <type_traits>
 
 namespace detail {
-
 // Always false, for use in static assertions which should only be checked after the template
 // parameter is known.
-    template<typename> constexpr bool tfalse = false;
+    template<typename>
+    constexpr bool tfalse = false;
 
 // ArrayVec is an array-based type similar to std::vector, which can be used in C++17 constexpr. The
 // limitation necessary to implement it is having a fixed amount of storage. These arrays will store
@@ -59,32 +59,36 @@ namespace detail {
 // [1, 37) range. The range starts from 1 so that shorter strings are distinguished from 'a'
 // letters, and has 36 elements because there are 26 letters (case-insensitive) and 10 digits.
     constexpr uint32_t to_id_code(char c) {
-        if ('a' <= c && c <= 'z')
+        if ('a' <= c && c <= 'z') {
             return c - 'a' + 1;
-        else if ('A' <= c && c <= 'Z')
+        } else if ('A' <= c && c <= 'Z') {
             return c - 'A' + 1;
-        else if ('0' <= c && c <= '9')
+        } else if ('0' <= c && c <= '9') {
             return c - '0' + 27;
-        else
+        } else {
             throw std::invalid_argument("invalid character in identifier");
+        }
     }
-
 } // namespace detail
 
 // Checks whether an identifier is valid, and if so, converts it to an unsigned 32-bit integer. This
 // works, because the identifier is up to 6 characters long and each character has at most 37 valid
 // values, and 37**6 < 2**32.
 constexpr uint32_t Id(const char *raw) {
-    if (raw == nullptr)
+    if (raw == nullptr) {
         throw std::invalid_argument("identifier is a null pointer");
+    }
 
     auto str = std::string_view(raw);
-    if (str.empty() || str.size() > 6)
+    if (str.empty() || str.size() > 6) {
         throw std::invalid_argument("identifier has invalid length");
+    }
 
     uint32_t hash = 0;
-    for (auto chr : str)
+    for (auto chr : str) {
         hash = hash * 37 + detail::to_id_code(chr);
+    }
+
     return hash;
 }
 
@@ -151,7 +155,6 @@ template<size_t memory_size, typename Word>
 struct Computer;
 
 namespace detail {
-
 // These structs contain all information required to execute the program. Template variable
 // specialization waiting ahead will convert the types to these structs, which constexpr will be
 // then able to use in the same way normal runtime code would do.
@@ -178,21 +181,22 @@ namespace detail {
 // this point. Imperative constexpr code will assign the correct address later, which is cleaner
 // than doing this with template metaprogramming.
 
-    template<typename Word, typename I> constexpr std::optional<BakedVariable<Word>>
-            match_variable = std::nullopt;
+    template<typename Word, typename I>
+    constexpr std::optional<BakedVariable<Word>> match_variable = std::nullopt;
 
-    template<typename Word, uint32_t id, auto init> constexpr std::optional<BakedVariable<Word>>
-            match_variable<Word, D<id, Num<init>>> = BakedVariable<Word>{id, 0, static_cast<Word>(init)};
+    template<typename Word, uint32_t id, auto init>
+    constexpr std::optional<BakedVariable<Word>> match_variable<Word, D<id, Num<init>>> =
+            BakedVariable<Word>{id, 0, static_cast<Word>(init)};
 
 // Extracts information from a Label type to a BakedLabel struct. The label address is not set at
 // this point. Imperative constexpr code will assign the correct address later, which is cleaner
 // than doing this with template metaprogramming.
 
-    template<typename I> constexpr std::optional<BakedLabel>
-            match_label = std::nullopt;
+    template<typename I>
+    constexpr std::optional<BakedLabel> match_label = std::nullopt;
 
-    template<uint32_t id> constexpr std::optional<BakedLabel>
-            match_label<Label<id>> = BakedLabel{id, 0};
+    template<uint32_t id>
+    constexpr std::optional<BakedLabel> match_label<Label<id>> = BakedLabel{id, 0};
 
 // Set up some template variables. These will be used for matching on various Mem/Num/Add/... types,
 // so that they can convert their information into constexpr types for the rest of the code to use.
@@ -200,15 +204,18 @@ namespace detail {
 // then fire, displaying a message informing about the issue and also displaying the I type which
 // could not be matched.
 
-    template<typename I> constexpr auto lvalue = [](auto &) {
+    template<typename I>
+    constexpr auto lvalue = [](auto &) {
         static_assert(tfalse<I>, "pattern not matched in `lvalue`");
     };
 
-    template<typename I> constexpr auto rvalue = [](auto &) {
+    template<typename I>
+    constexpr auto rvalue = [](auto &) {
         static_assert(tfalse<I>, "pattern not matched in `rvalue`");
     };
 
-    template<typename I> constexpr auto instruction = [](auto &) {
+    template<typename I>
+    constexpr auto instruction = [](auto &) {
         static_assert(tfalse<I>, "pattern not matched in `instruction`");
     };
 
@@ -216,25 +223,32 @@ namespace detail {
 // the computer state. Instructions' implementations will later use this lambda to compute the
 // address and access the computer memory.
 
-    template<typename R> constexpr auto lvalue<Mem<R>> = [](auto &computer) {
+    template<typename R>
+    constexpr auto lvalue<Mem<R>> = [](auto &computer) {
         return computer.address_cast(rvalue<R>(computer));
     };
 
 // Use partial variable specialization to create a lambda which computes an rvalue using the
 // computer state. These will be used by the instructions' implementations.
 
-    template<auto value> constexpr auto rvalue<Num<value>> = [](auto &) {
+    template<auto value>
+    constexpr auto rvalue<Num<value>> = [](auto &) {
         return value;
     };
 
-    template<typename R> constexpr auto rvalue<Mem<R>> = [](auto &computer) {
+    template<typename R>
+    constexpr auto rvalue<Mem<R>> = [](auto &computer) {
         return computer.memory[computer.address_cast(rvalue<R>(computer))];
     };
 
-    template<uint32_t id> constexpr auto rvalue<Lea<id>> = [](auto &computer) {
-        for (auto &&variable : computer.variables)
-            if (variable.id == id)
+    template<uint32_t id>
+    constexpr auto rvalue<Lea<id>> = [](auto &computer) {
+        for (auto &&variable : computer.variables) {
+            if (variable.id == id) {
                 return variable.address;
+            }
+        }
+
         throw std::invalid_argument("variable does not exist");
     };
 
@@ -247,90 +261,125 @@ namespace detail {
 // There is some duplication over here that would be trivial to fix with some higher-order lambdas,
 // but it would probably make the program logic needlessly confusing.
 
-    template<uint32_t id, auto init> constexpr auto instruction<D<id, Num<init>>> = [](auto &computer) {
-        ++computer.instruction_pointer;
+    template<uint32_t id, auto init>
+    constexpr auto instruction<D<id, Num<init>>> = [](auto &computer) {
+        computer.instruction_pointer++;
     };
 
-    template<typename L, typename R> constexpr auto instruction<Mov<L, R>> = [](auto &computer) {
+    template<typename L, typename R>
+    constexpr auto instruction<Mov<L, R>> = [](auto &computer) {
         computer.memory[lvalue<L>(computer)] = rvalue<R>(computer);
-        ++computer.instruction_pointer;
+        computer.instruction_pointer++;
     };
 
-    template<typename L, typename R> constexpr auto instruction<Add<L, R>> = [](auto &computer) {
+    template<typename L, typename R>
+    constexpr auto instruction<Add<L, R>> = [](auto &computer) {
         auto &target = computer.memory[lvalue<L>(computer)];
+
         target += rvalue<R>(computer);
+
         computer.zero_flag = target == 0;
         computer.sign_flag = target < 0;
-        ++computer.instruction_pointer;
+
+        computer.instruction_pointer++;
     };
 
-    template<typename L, typename R> constexpr auto instruction<Sub<L, R>> = [](auto &computer) {
+    template<typename L, typename R>
+    constexpr auto instruction<Sub<L, R>> = [](auto &computer) {
         auto &target = computer.memory[lvalue<L>(computer)];
+
         target -= rvalue<R>(computer);
+
         computer.zero_flag = target == 0;
         computer.sign_flag = target < 0;
-        ++computer.instruction_pointer;
+
+        computer.instruction_pointer++;
     };
 
-    template<typename L> constexpr auto instruction<Inc<L>> = instruction<Add<L, Num<1>>>;
+    template<typename L>
+    constexpr auto instruction<Inc<L>> = instruction<Add<L, Num<1>>>;
 
-    template<typename L> constexpr auto instruction<Dec<L>> = instruction<Sub<L, Num<1>>>;
+    template<typename L>
+    constexpr auto instruction<Dec<L>> = instruction<Sub<L, Num<1>>>;
 
-    template<typename L, typename R> constexpr auto instruction<And<L, R>> = [](auto &computer) {
+    template<typename L, typename R>
+    constexpr auto instruction<And<L, R>> = [](auto &computer) {
         auto &target = computer.memory[lvalue<L>(computer)];
+
         target &= rvalue<R>(computer);
+
         computer.zero_flag = target == 0;
-        ++computer.instruction_pointer;
+
+        computer.instruction_pointer++;
     };
 
-    template<typename L, typename R> constexpr auto instruction<Or<L, R>> = [](auto &computer) {
+    template<typename L, typename R>
+    constexpr auto instruction<Or<L, R>> = [](auto &computer) {
         auto &target = computer.memory[lvalue<L>(computer)];
+
         target |= rvalue<R>(computer);
+
         computer.zero_flag = target == 0;
-        ++computer.instruction_pointer;
+
+        computer.instruction_pointer++;
     };
 
-    template<typename L> constexpr auto instruction<Not<L>> = [](auto &computer) {
+    template<typename L>
+    constexpr auto instruction<Not<L>> = [](auto &computer) {
         auto &target = computer.memory[lvalue<L>(computer)];
+
         target = ~target;
+
         computer.zero_flag = target == 0;
-        ++computer.instruction_pointer;
+
+        computer.instruction_pointer++;
     };
 
-    template<typename L, typename R> constexpr auto instruction<Cmp<L, R>> = [](auto &computer) {
+    template<typename L, typename R>
+    constexpr auto instruction<Cmp<L, R>> = [](auto &computer) {
         auto result = computer.word_cast(rvalue<L>(computer));
+
         result -= rvalue<R>(computer);
+
         computer.zero_flag = result == 0;
         computer.sign_flag = result < 0;
-        ++computer.instruction_pointer;
+
+        computer.instruction_pointer++;
     };
 
-    template<uint32_t id> constexpr auto instruction<Label<id>> = [](auto &computer) {
-        ++computer.instruction_pointer;
+    template<uint32_t id>
+    constexpr auto instruction<Label<id>> = [](auto &computer) {
+        computer.instruction_pointer++;
     };
 
-    template<uint32_t id> constexpr auto instruction<Jmp<id>> = [](auto &computer) {
+    template<uint32_t id>
+    constexpr auto instruction<Jmp<id>> = [](auto &computer) {
         for (auto &&label : computer.labels) {
             if (label.id == id) {
                 computer.instruction_pointer = label.address;
                 return;
             }
         }
+
         throw std::invalid_argument("label does not exist");
     };
 
-    template<uint32_t id> constexpr auto instruction<Jz<id>> = [](auto &computer) {
-        if (computer.zero_flag)
+    template<uint32_t id>
+    constexpr auto instruction<Jz<id>> = [](auto &computer) {
+        if (computer.zero_flag) {
             instruction<Jmp<id>>(computer);
-        else
+        } else {
             ++computer.instruction_pointer;
+        }
     };
 
-    template<uint32_t id> constexpr auto instruction<Js<id>> = [](auto &computer) {
-        if (computer.sign_flag)
+    template<uint32_t id>
+    constexpr auto instruction<Js<id>> = [](auto &computer) {
+        if (computer.sign_flag) {
             instruction<Jmp<id>>(computer);
-        else
+        } else {
             ++computer.instruction_pointer;
+        }
     };
 
 // These functions use the helper match_variable and match_label specializations, and push it to an
@@ -338,11 +387,9 @@ namespace detail {
 // about skipping invalid entries.
 
     template<typename I, typename Word>
-    constexpr void parse_variable(
-            ArrayVecRef<BakedVariable<Word>> variables,
-            size_t &address
-    ) {
+    constexpr void parse_variable(ArrayVecRef<BakedVariable<Word>> variables, size_t &address) {
         auto variable = match_variable<Word, I>;
+        
         if (variable.has_value()) {
             variable->address = address++;
             variables.push_back(*variable);
@@ -352,12 +399,12 @@ namespace detail {
     template<typename I>
     constexpr void parse_label(ArrayVecRef<BakedLabel> labels, size_t address) {
         auto label = match_label<I>;
+        
         if (label.has_value()) {
             label->address = address;
             labels.push_back(*label);
         }
     }
-
 } // namespace detail
 
 // This type has access to the parameter pack with all instructions, variable declarations, and
@@ -423,8 +470,9 @@ struct Computer {
     }
 
     constexpr void initialize_variables() {
-        for (auto &&variable : variables)
+        for (auto &&variable : variables) {
             memory[variable.address] = variable.init;
+        }
     }
 
     constexpr void execute() {
