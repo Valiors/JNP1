@@ -369,7 +369,7 @@ namespace detail {
         if (computer.zero_flag) {
             instruction<Jmp<id>>(computer);
         } else {
-            ++computer.instruction_pointer;
+            computer.instruction_pointer++;
         }
     };
 
@@ -378,7 +378,7 @@ namespace detail {
         if (computer.sign_flag) {
             instruction<Jmp<id>>(computer);
         } else {
-            ++computer.instruction_pointer;
+            computer.instruction_pointer++;
         }
     };
 
@@ -389,7 +389,7 @@ namespace detail {
     template<typename I, typename Word>
     constexpr void parse_variable(ArrayVecRef<BakedVariable<Word>> variables, size_t &address) {
         auto variable = match_variable<Word, I>;
-        
+
         if (variable.has_value()) {
             variable->address = address++;
             variables.push_back(*variable);
@@ -399,7 +399,7 @@ namespace detail {
     template<typename I>
     constexpr void parse_label(ArrayVecRef<BakedLabel> labels, size_t address) {
         auto label = match_label<I>;
-        
+
         if (label.has_value()) {
             label->address = address;
             labels.push_back(*label);
